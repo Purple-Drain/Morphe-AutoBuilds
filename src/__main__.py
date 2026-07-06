@@ -27,7 +27,16 @@ def _should_retry_with_older_version(output: str | None) -> bool:
 
 def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     """Build APK for specific architecture"""
-    download_files, name = downloader.download_required(source)
+    try:
+        download_files, name = downloader.download_required(source)
+    except Exception as e:
+        # Upstream tool/patches repo can be permanently or transiently
+        # unavailable (e.g. a GitHub DMCA takedown returns 451 forever).
+        # Treat this the same as a failed APK download: skip the app
+        # instead of crashing the whole job.
+        logging.error(f"❌ Failed to fetch tools/patches for source '{source}': {e}")
+        logging.error(f"Skipping {app_name}/{source}.")
+        return None
 
     # Log downloaded files for debugging
     logging.info(f"📦 Downloaded {len(download_files)} files for {source}:")
@@ -232,6 +241,7 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
                         "java", "-jar", str(cli),
                         "patch", "--patches", str(patches),
                         "--out", str(output_apk), str(input_apk),
+                        "--continue-on-error",
                         *exclude_patches, *include_patches
                     ]
                     utils.run_process(morphe_cmd, capture=True, stream=True)
