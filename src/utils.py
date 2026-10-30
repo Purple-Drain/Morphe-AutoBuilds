@@ -290,16 +290,22 @@ def get_supported_versions(package_name: str, cli: str, patches: str) -> Optiona
                 "list-patches",
                 "--with-packages",
                 "--with-versions",
-                patches,
+                "-f", package_name,
+                "--patches", patches,  # 1.19+ rejects a positional patches file
             ]
             alt_out = run_process(alt_cmd, capture=True, silent=True, check=False) or ""
             derived: list[str] = []
+            # Versions sit on their own double-indented lines under
+            # "Package name: <pkg>" / "Compatible versions:".
+            in_pkg = False
             for ln in alt_out.splitlines():
-                if package_name not in ln:
-                    continue
-                # Grab any versions mentioned on the same line as the package name.
-                for m in re.finditer(r"\d+(?:\.\d+)+(?:\(\d+\))?", ln):
-                    derived.append(m.group(0))
+                stripped = ln.strip()
+                if stripped.startswith("Package name:"):
+                    in_pkg = stripped.split(":", 1)[1].strip() == package_name
+                elif not ln.startswith("\t"):
+                    in_pkg = False
+                elif in_pkg and ln.startswith("\t\t") and stripped[:1].isdigit():
+                    derived.append(stripped)
             if derived:
                 versions.extend(derived)
         except Exception:
