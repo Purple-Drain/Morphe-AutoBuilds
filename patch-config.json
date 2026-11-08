@@ -333,6 +333,14 @@
       "source": "taknok"
     },
     {
+      "app_name": "phone",
+      "source": "taknok"
+    },
+    {
+      "app_name": "spotify",
+      "source": "revanced"
+    },
+    {
       "app_name": "windscribe",
       "source": "rushiranpise-dev"
     },
